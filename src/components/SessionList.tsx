@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Clock, MessageSquare } from "lucide-react";
+import { Clock, MessageSquare, Search, X } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Pagination } from "@/components/ui/pagination";
 import { ClaudeMemoriesDropdown } from "@/components/ClaudeMemoriesDropdown";
@@ -57,17 +57,42 @@ export const SessionList: React.FC<SessionListProps> = ({
   className,
 }) => {
   const [currentPage, setCurrentPage] = useState(1);
-  
-  // Calculate pagination
-  const totalPages = Math.ceil(sessions.length / ITEMS_PER_PAGE);
+  const [query, setQuery] = useState("");
+
+  const trimmedQuery = query.trim().toLowerCase();
+
+  const filteredSessions = useMemo(() => {
+    if (!trimmedQuery) return sessions;
+    return sessions.filter((s) => s.id.toLowerCase().includes(trimmedQuery));
+  }, [sessions, trimmedQuery]);
+
+  // Calculate pagination on the filtered list
+  const totalPages = Math.max(1, Math.ceil(filteredSessions.length / ITEMS_PER_PAGE));
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
-  const currentSessions = sessions.slice(startIndex, endIndex);
-  
-  // Reset to page 1 if sessions change
+  const currentSessions = filteredSessions.slice(startIndex, endIndex);
+
+  // Reset to page 1 if sessions change or the query changes
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [sessions.length]);
+  }, [sessions.length, trimmedQuery]);
+
+  // Exact-match shortcut: when the user pastes a full UUID-style id that matches
+  // exactly one session, open it. Skip for short queries to avoid surprises.
+  React.useEffect(() => {
+    if (trimmedQuery.length < 32) return;
+    const exact = sessions.filter((s) => s.id.toLowerCase() === trimmedQuery);
+    if (exact.length !== 1) return;
+    const session = exact[0];
+    const t = window.setTimeout(() => {
+      const event = new CustomEvent("claude-session-selected", {
+        detail: { session, projectPath },
+      });
+      window.dispatchEvent(event);
+      onSessionClick?.(session);
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [trimmedQuery, sessions, projectPath, onSessionClick]);
   
   return (
     <TooltipProvider>
@@ -84,6 +109,48 @@ export const SessionList: React.FC<SessionListProps> = ({
             onEditFile={onEditClaudeFile}
           />
         </motion.div>
+      )}
+
+      {/* Session ID search */}
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search by session ID…"
+            aria-label="Search sessions by ID"
+            className={cn(
+              "w-full h-9 rounded-md border bg-background pl-8 pr-8 text-sm",
+              "placeholder:text-muted-foreground",
+              "focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent",
+            )}
+            spellCheck={false}
+            autoComplete="off"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {trimmedQuery && (
+          <p className="text-caption text-muted-foreground whitespace-nowrap">
+            {filteredSessions.length} of {sessions.length}
+          </p>
+        )}
+      </div>
+
+      {filteredSessions.length === 0 && trimmedQuery && (
+        <p className="text-caption text-muted-foreground italic text-center py-8">
+          No sessions match <span className="font-mono">{query}</span>
+        </p>
       )}
 
       <AnimatePresence mode="popLayout">
@@ -172,11 +239,13 @@ export const SessionList: React.FC<SessionListProps> = ({
         </div>
       </AnimatePresence>
       
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-        />
+        {filteredSessions.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
     </TooltipProvider>
   );
