@@ -26,8 +26,10 @@ export interface CustomThemeColors {
 interface ThemeContextType {
   theme: ThemeMode;
   customColors: CustomThemeColors;
+  fontSize: number;
   setTheme: (theme: ThemeMode) => Promise<void>;
   setCustomColors: (colors: Partial<CustomThemeColors>) => Promise<void>;
+  setFontSize: (size: number) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -35,6 +37,18 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const THEME_STORAGE_KEY = 'theme_preference';
 const CUSTOM_COLORS_STORAGE_KEY = 'theme_custom_colors';
+const FONT_SIZE_STORAGE_KEY = 'font_size_preference';
+
+const DEFAULT_FONT_SIZE = 16;
+const MIN_FONT_SIZE = 12;
+const MAX_FONT_SIZE = 22;
+
+const clampFontSize = (n: number) =>
+  Math.max(MIN_FONT_SIZE, Math.min(MAX_FONT_SIZE, Math.round(n)));
+
+const applyFontSize = (size: number) => {
+  document.documentElement.style.fontSize = `${size}px`;
+};
 
 // Default custom theme colors (based on current dark theme)
 const DEFAULT_CUSTOM_COLORS: CustomThemeColors = {
@@ -60,6 +74,7 @@ const DEFAULT_CUSTOM_COLORS: CustomThemeColors = {
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeMode>('gray');
   const [customColors, setCustomColorsState] = useState<CustomThemeColors>(DEFAULT_CUSTOM_COLORS);
+  const [fontSize, setFontSizeState] = useState<number>(DEFAULT_FONT_SIZE);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load theme preference and custom colors from storage
@@ -81,7 +96,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
         // Load custom colors
         const savedColors = await api.getSetting(CUSTOM_COLORS_STORAGE_KEY);
-        
+
         if (savedColors) {
           const colors = JSON.parse(savedColors) as CustomThemeColors;
           setCustomColorsState(colors);
@@ -89,6 +104,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             await applyTheme('custom', colors);
           }
         }
+
+        // Load font size
+        const savedFontSize = await api.getSetting(FONT_SIZE_STORAGE_KEY);
+        const size = savedFontSize ? clampFontSize(Number(savedFontSize)) : DEFAULT_FONT_SIZE;
+        setFontSizeState(size);
+        applyFontSize(size);
       } catch (error) {
         console.error('Failed to load theme settings:', error);
       } finally {
@@ -164,11 +185,24 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [theme, customColors, applyTheme]);
 
+  const setFontSize = useCallback(async (size: number) => {
+    const clamped = clampFontSize(size);
+    setFontSizeState(clamped);
+    applyFontSize(clamped);
+    try {
+      await api.saveSetting(FONT_SIZE_STORAGE_KEY, String(clamped));
+    } catch (error) {
+      console.error('Failed to save font size preference:', error);
+    }
+  }, []);
+
   const value: ThemeContextType = {
     theme,
     customColors,
+    fontSize,
     setTheme,
     setCustomColors,
+    setFontSize,
     isLoading,
   };
 

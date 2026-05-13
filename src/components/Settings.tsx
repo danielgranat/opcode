@@ -82,7 +82,7 @@ export const Settings: React.FC<SettingsProps> = ({
   const getUserHooks = React.useRef<(() => any) | null>(null);
   
   // Theme hook
-  const { theme, setTheme, customColors, setCustomColors } = useTheme();
+  const { theme, setTheme, customColors, setCustomColors, fontSize, setFontSize } = useTheme();
   
   // Proxy state
   const [proxySettingsChanged, setProxySettingsChanged] = useState(false);
@@ -471,6 +471,60 @@ export const Settings: React.FC<SettingsProps> = ({
                       </div>
                     </div>
                     
+                    {/* Font Size */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label htmlFor="font-size-input">Font size</Label>
+                        <p className="text-caption text-muted-foreground mt-1">
+                          Scales every UI element (12–22px)
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="inline-flex items-center rounded-md border bg-background overflow-hidden">
+                          <button
+                            type="button"
+                            onClick={() => setFontSize(fontSize - 1)}
+                            disabled={fontSize <= 12}
+                            className="px-2 h-9 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label="Decrease font size"
+                          >
+                            −
+                          </button>
+                          <input
+                            id="font-size-input"
+                            type="number"
+                            min={12}
+                            max={22}
+                            step={1}
+                            value={fontSize}
+                            onChange={(e) => {
+                              const n = Number(e.target.value);
+                              if (Number.isFinite(n)) setFontSize(n);
+                            }}
+                            className="w-14 h-9 text-center text-sm font-mono tabular-nums bg-transparent border-x focus:outline-none focus:ring-2 focus:ring-ring [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            aria-label="Font size in pixels"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFontSize(fontSize + 1)}
+                            disabled={fontSize >= 22}
+                            className="px-2 h-9 hover:bg-muted/50 disabled:opacity-40 disabled:cursor-not-allowed"
+                            aria-label="Increase font size"
+                          >
+                            +
+                          </button>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFontSize(16)}
+                          className="text-xs px-2 py-1 rounded-md hover:bg-background/50"
+                          aria-label="Reset font size to default"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                    </div>
+
                     {/* Custom Color Editor */}
                     {theme === 'custom' && (
                       <div className="space-y-4 p-4 border rounded-lg bg-muted/20">
