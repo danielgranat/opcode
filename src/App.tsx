@@ -24,7 +24,7 @@ import { ProjectSettings } from '@/components/ProjectSettings';
 import { TabManager } from "@/components/TabManager";
 import { TabContent } from "@/components/TabContent";
 import { useTabState } from "@/hooks/useTabState";
-import { useAppLifecycle, useTrackEvent } from "@/hooks";
+import { useAppLifecycle, useTrackEvent, useTheme } from "@/hooks";
 import { StartupIntro } from "@/components/StartupIntro";
 
 type View = 
@@ -47,6 +47,7 @@ type View =
  * AppContent component - Contains the main app logic, wrapped by providers
  */
 function AppContent() {
+  const { tabPosition } = useTheme();
   const [view, setView] = useState<View>("tabs");
   const { createClaudeMdTab, createSettingsTab, createUsageTab, createMCPTab, createAgentsTab } = useTabState();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -337,7 +338,14 @@ function AppContent() {
         ) : null;
       
       case "tabs":
-        return (
+        return tabPosition === 'left' ? (
+          <div className="h-full flex flex-row">
+            <TabManager className="flex-shrink-0" />
+            <div className="flex-1 overflow-hidden">
+              <TabContent />
+            </div>
+          </div>
+        ) : (
           <div className="h-full flex flex-col">
             <TabManager className="flex-shrink-0" />
             <div className="flex-1 overflow-hidden">

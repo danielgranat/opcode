@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useCallback, useEffect } fr
 import { api } from '../lib/api';
 
 export type ThemeMode = 'dark' | 'gray' | 'light' | 'custom';
+export type TabPosition = 'top' | 'left';
 
 export interface CustomThemeColors {
   background: string;
@@ -27,9 +28,11 @@ interface ThemeContextType {
   theme: ThemeMode;
   customColors: CustomThemeColors;
   fontSize: number;
+  tabPosition: TabPosition;
   setTheme: (theme: ThemeMode) => Promise<void>;
   setCustomColors: (colors: Partial<CustomThemeColors>) => Promise<void>;
   setFontSize: (size: number) => Promise<void>;
+  setTabPosition: (position: TabPosition) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -38,6 +41,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 const THEME_STORAGE_KEY = 'theme_preference';
 const CUSTOM_COLORS_STORAGE_KEY = 'theme_custom_colors';
 const FONT_SIZE_STORAGE_KEY = 'font_size_preference';
+const TAB_POSITION_STORAGE_KEY = 'tab_position_preference';
 
 const DEFAULT_FONT_SIZE = 16;
 const MIN_FONT_SIZE = 12;
@@ -75,6 +79,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [theme, setThemeState] = useState<ThemeMode>('gray');
   const [customColors, setCustomColorsState] = useState<CustomThemeColors>(DEFAULT_CUSTOM_COLORS);
   const [fontSize, setFontSizeState] = useState<number>(DEFAULT_FONT_SIZE);
+  const [tabPosition, setTabPositionState] = useState<TabPosition>('top');
   const [isLoading, setIsLoading] = useState(true);
 
   // Load theme preference and custom colors from storage
@@ -110,6 +115,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         const size = savedFontSize ? clampFontSize(Number(savedFontSize)) : DEFAULT_FONT_SIZE;
         setFontSizeState(size);
         applyFontSize(size);
+
+        // Load tab position
+        const savedTabPosition = await api.getSetting(TAB_POSITION_STORAGE_KEY);
+        if (savedTabPosition === 'left' || savedTabPosition === 'top') {
+          setTabPositionState(savedTabPosition);
+        }
       } catch (error) {
         console.error('Failed to load theme settings:', error);
       } finally {
@@ -196,13 +207,60 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, []);
 
+  // Global keyboard shortcuts: CMD/Ctrl + (=|+) increase, CMD/Ctrl + - decrease, CMD/Ctrl + 0 reset.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const mod = e.metaKey || e.ctrlKey;
+      if (!mod) return;
+      // Avoid intercepting CMD+Shift+X chords, except CMD+Shift+= which is the literal "+".
+      if (e.altKey) return;
+
+      const isPlus = e.key === '+' || e.key === '=';
+      const isMinus = e.key === '-' || e.key === '_';
+      const isZero = e.key === '0';
+      if (!isPlus && !isMinus && !isZero) return;
+
+      e.preventDefault();
+      if (isZero) {
+        setFontSize(DEFAULT_FONT_SIZE);
+      } else if (isPlus) {
+        setFontSizeState((prev) => {
+          const next = clampFontSize(prev + 1);
+          applyFontSize(next);
+          api.saveSetting(FONT_SIZE_STORAGE_KEY, String(next)).catch(() => {});
+          return next;
+        });
+      } else if (isMinus) {
+        setFontSizeState((prev) => {
+          const next = clampFontSize(prev - 1);
+          applyFontSize(next);
+          api.saveSetting(FONT_SIZE_STORAGE_KEY, String(next)).catch(() => {});
+          return next;
+        });
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [setFontSize]);
+
+  const setTabPosition = useCallback(async (position: TabPosition) => {
+    setTabPositionState(position);
+    try {
+      await api.saveSetting(TAB_POSITION_STORAGE_KEY, position);
+    } catch (error) {
+      console.error('Failed to save tab position preference:', error);
+    }
+  }, []);
+
   const value: ThemeContextType = {
     theme,
     customColors,
     fontSize,
+    tabPosition,
     setTheme,
     setCustomColors,
     setFontSize,
+    setTabPosition,
     isLoading,
   };
 

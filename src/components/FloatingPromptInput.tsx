@@ -15,6 +15,7 @@ import {
   
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTheme } from "@/hooks";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
@@ -224,6 +225,7 @@ const FloatingPromptInputInner = (
   }: FloatingPromptInputProps,
   ref: React.Ref<FloatingPromptInputRef>,
 ) => {
+  const { tabPosition } = useTheme();
   const [prompt, setPrompt] = useState("");
   const [selectedModel, setSelectedModel] = useState<"sonnet" | "opus">(defaultModel);
   const [selectedThinkingMode, setSelectedThinkingMode] = useState<ThinkingMode>("auto");
@@ -1059,7 +1061,8 @@ const FloatingPromptInputInner = (
       {/* Fixed Position Input Bar */}
       <div
         className={cn(
-          "fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg",
+          "fixed bottom-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t border-border shadow-lg",
+          tabPosition === 'left' ? "left-56" : "left-0",
           dragActive && "ring-2 ring-primary ring-offset-2",
           className
         )}

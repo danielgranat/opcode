@@ -82,7 +82,7 @@ export const Settings: React.FC<SettingsProps> = ({
   const getUserHooks = React.useRef<(() => any) | null>(null);
   
   // Theme hook
-  const { theme, setTheme, customColors, setCustomColors, fontSize, setFontSize } = useTheme();
+  const { theme, setTheme, customColors, setCustomColors, fontSize, setFontSize, tabPosition, setTabPosition } = useTheme();
   
   // Proxy state
   const [proxySettingsChanged, setProxySettingsChanged] = useState(false);
@@ -476,7 +476,7 @@ export const Settings: React.FC<SettingsProps> = ({
                       <div>
                         <Label htmlFor="font-size-input">Font size</Label>
                         <p className="text-caption text-muted-foreground mt-1">
-                          Scales every UI element (12–22px)
+                          Scales every UI element (12–22px) · ⌘+ / ⌘− / ⌘0
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -521,6 +521,42 @@ export const Settings: React.FC<SettingsProps> = ({
                           aria-label="Reset font size to default"
                         >
                           Reset
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Tab Position */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Label>Tab position</Label>
+                        <p className="text-caption text-muted-foreground mt-1">
+                          Where workspace tabs appear
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1 p-1 bg-muted/30 rounded-lg">
+                        <button
+                          onClick={() => setTabPosition('top')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            tabPosition === 'top'
+                              ? "bg-background shadow-sm"
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {tabPosition === 'top' && <Check className="h-3 w-3" />}
+                          Top
+                        </button>
+                        <button
+                          onClick={() => setTabPosition('left')}
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+                            tabPosition === 'left'
+                              ? "bg-background shadow-sm"
+                              : "hover:bg-background/50"
+                          )}
+                        >
+                          {tabPosition === 'left' && <Check className="h-3 w-3" />}
+                          Left
                         </button>
                       </div>
                     </div>
